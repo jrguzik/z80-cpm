@@ -14,6 +14,34 @@
 ;
 ;------------------------------------------------------------------------------
 
+;
+; Mods by jguzik
+;   - Removed support for second serial point - only port B 57600 8N1
+;   - Based on a 4MHGZ crystal for the processor and
+;       a 1.85432MHZ for the SIO
+;   - Lots of untested stuff right now - the bios disk I/O is currently
+;       a work in progress and will hopefully support a MMC card via
+;       a shift register and a binary counter to provide performace
+;   - C_READSTR is a reimplementaton that hopefully handles tabs
+;   - Removed IHEX load from monitor
+;   - added XMODEM support to the monitor
+;   - added LOADTPA using XMODEM (basically XMODEM to $0100)
+;   - added EXECTPA that executes the TPA at $0100
+;   - added DMPMEM and EDMEM routines to monitor
+;   - added FILLMEM to erase memory
+;   - added REPLACEMON that XMODEMS a new monitor down
+;   - lots of comments
+;
+;
+; Currently tested programs
+;   basic.asm    - as a CP/M program, able to play super star trek
+;   bbcbasic.com - generic CP/M version
+;   epro.com     - Testbad for the C_READSTR function
+;
+; Wants
+;  PL/I          - Blast from the past
+;
+
 ;------------------------------------------------------------------------------
 ; Page ZERO layout
 ;------------------------------------------------------------------------------
@@ -178,7 +206,7 @@ BOOTDPBASE:  LD     (IX + $0a),D
 
 BOOTDPBASED:
              LD     IX,DPB0
-             LD     (IX + $00),128 
+             LD     (IX + $00),128
              LD     (IX + $02),5
              LD     (IX + $03),31
              LD     (IX + $04),1
@@ -189,8 +217,9 @@ BOOTDPBASED:
              LD     (IX + $09),248
              LD     (IX + $0e),1
 
+;  Attempting to write only one disk for now, support for multiple later
 ;            LD     IX,DPB
-;            LD     (IX + $00),128 
+;            LD     (IX + $00),128
 ;            LD     (IX + $02),5
 ;            LD     (IX + $03),31
 ;            LD     (IX + $04),1
@@ -228,10 +257,11 @@ BOOTDPBASED:
              ; Channel B
              LD     B,$06
              LD     C,SIOB_C
-             LD     D,$00
+             LD     DE,INITSERREG
              LD     HL,INITSERSEQ
-INITSER:     OUT    (C),D
-             INC    D
+INITSER:     LD     A,(DE)
+             OUT    (C),A
+             INC    DE
              OUTI
              JR     NZ,INITSER
 
@@ -252,7 +282,7 @@ INITSER:     OUT    (C),D
 ;------------------------------------------------------------------------------
 WBOOT:       LD     SP,STACK           ; Set the Stack Pointer
              CALL   WRCRLF
- 
+
 WBOOTCLR:    LD     (HL),A
              INC    HL
              DJNZ   WBOOTCLR
@@ -1414,7 +1444,7 @@ C_READSTRIN: CALL  CONIN               ; Get a char
              CP    TAB                 ; TAB
              JR    Z,C_READSTRTAB
              CP    ' '                 ; Other CNTRL char
-             JR    C,C_READSTRCTL      ;   Yes - print it sperical
+             JR    C,C_READSTRCTL      ;   Yes - print it with caret (^)
              CALL  CNTDOUT             ; Write the char out normally
 
 C_READSTRCNT:INC   B                   ; Adjust the buffer
@@ -1694,12 +1724,13 @@ CPMFUNCS:    .DW    P_TERMCPM    ;$00/00
 ; 6-5 Tx data bits          (0..3 = 5bits, 7bits, 6bits, 8bits)
 ; 7   DTR enabled/disabled
 
+INITSERREG:  .BYTE  0,4,1,2,3,5         ; Order of registers the data is below
 INITSERSEQ:  .BYTE  $18                 ; (000)(110)(00) - Reset Channel
+             .BYTE  $84                 ; (10)(00)(01)(0)(0) - clock mode x32, 8 bits,  1 stop, no parity
+                                        ;    aka 57600 8N1
              .BYTE  $18                 ; (0)(0)(0)(11)(0)(0)(0) -  Interrupt on all chars
              .BYTE  SERIALINTVEC        ; INTERRUPT VECTOR ADDRESS
              .BYTE  $E1                 ; (11)(1)(0)(0)(0)(0)(1) RX 8bites, Hardware handshake, Rx Enable
-             .BYTE  $84                 ; (10)(00)(01)(0)(0) - clock mode x32, 8 bits,  1 stop, no parity
-                                        ;    aka 57600 8N1
              .BYTE  RTS_LOW             ; EA (1)(11)(0)(1)(0)(1)(0) - DTR enable, 8 bites, TX enable, RTS eanbled
 
 SIGNON:      .ASCII "Z80 SBC Boot ROM 1.2h by G. Searle/J Guzik"
