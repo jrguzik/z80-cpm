@@ -441,6 +441,12 @@ SETSEC:      LD     DSKSEC,BC
 SETDMA:      LD     DSKDMA,BC
              RET
 
+;
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;  Totally untested READ/WRITE routines - checked in for now
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;
+
 ;------------------------------------------------------------------------------
 ; BIOS 13 - Read the currently set track and sector at the current DMA address.
 ;           Returns A=0 for OK
@@ -673,28 +679,6 @@ MMCOUTBYTE:  OUT    (MMCSEL),A           ; Select the MMC
              RET
 
 ;------------------------------------------------------------------------------
-; BIOS 15 - Return status of current printer device.
-;           Returns A=0 (not ready)
-;                   A=0FFh (ready).
-;------------------------------------------------------------------------------
-LISTST:      LD     A,$00
-             RET
-
-;------------------------------------------------------------------------------
-; BIOS 16 - Translate sector numbers to take account of skewing.
-;           On entry
-;              BC=logical sector number (zero based)
-;              DE=address of translation table
-;           Returns
-;              HL=physical sector number
-;           On a system with hardware skewing,
-;              this would normally ignore DE and return either BC or BC+1.
-;------------------------------------------------------------------------------
-SECTRAN:     LD     H,B
-             LD     L,C
-             RET
-
-;------------------------------------------------------------------------------
 ; BIOS HLP - Translate DSK[D]/TRK[BC]/SECT[HL] to DEHL
 ;------------------------------------------------------------------------------
 ; LBA - 3333333322222222 11111111 00000000
@@ -754,6 +738,28 @@ TRK8NS:      LD     H,A
              AND    $03
              LD     E,A
              LD     D,$e0
+             RET
+
+;------------------------------------------------------------------------------
+; BIOS 15 - Return status of current printer device.
+;           Returns A=0 (not ready)
+;                   A=0FFh (ready).
+;------------------------------------------------------------------------------
+LISTST:      LD     A,$00
+             RET
+
+;------------------------------------------------------------------------------
+; BIOS 16 - Translate sector numbers to take account of skewing.
+;           On entry
+;              BC=logical sector number (zero based)
+;              DE=address of translation table
+;           Returns
+;              HL=physical sector number
+;           On a system with hardware skewing,
+;              this would normally ignore DE and return either BC or BC+1.
+;------------------------------------------------------------------------------
+SECTRAN:     LD     H,B
+             LD     L,C
              RET
 
 ;------------------------------------------------------------------------------
