@@ -37,11 +37,11 @@ DEL     .EQU    7FH             ; Delete
 
 ; BASIC WORK SPACE LOCATIONS
 
-WRKSPC  .EQU    02800H             ; BASIC Work space
-USR     .EQU    WRKSPC+3H           ; "USR (x)" jump
-OUTSUB  .EQU    WRKSPC+6H           ; "OUT p,n"
-OTPORT  .EQU    WRKSPC+7H           ; Port (p)
-DIVSUP  .EQU    WRKSPC+9H           ; Division support routine
+WRKSPC  .EQU    01e00H               ; BASIC Work space
+USR     .EQU    WRKSPC+3H            ; "USR (x)" jump
+OUTSUB  .EQU    WRKSPC+6H            ; "OUT p,n"
+OTPORT  .EQU    WRKSPC+7H            ; Port (p)
+DIVSUP  .EQU    WRKSPC+9H            ; Division support routine
 DIV1    .EQU    WRKSPC+0AH           ; <- Values
 DIV2    .EQU    WRKSPC+0EH           ; <-   to
 DIV3    .EQU    WRKSPC+12H           ; <-   be
@@ -142,7 +142,7 @@ BN      .EQU    28H             ; BIN error
         .BYTE   CR,LF,0
         .ENDM
 
-        .ORG    0800H
+        .ORG    0100H
 
 COLD:   JP      STARTB          ; Jump for cold start
 WARM:   JP      WARMST          ; Jump for warm start
@@ -1270,9 +1270,13 @@ UPDATA: LD      (NXTDAT),HL     ; Update DATA pointer
         EX      DE,HL           ; Restore code string address
         RET
 
-TSTBRK: RST     18H             ; Check input status
+TSTBRK: EXX                     ; Check input status
+        LD      C,$06
+        LD      E,$ff
+        CALL    $0005
+        EXX
+        OR      A
         RET     Z               ; No key, go back
-        RST     10H             ; Get the key into A
         CP      ESC             ; Escape key?
         JR      Z,BRK           ; Yes, break
         CP      CTRLC           ; <Ctrl-C>
@@ -1280,7 +1284,13 @@ TSTBRK: RST     18H             ; Check input status
         CP      CTRLS           ; Stop scrolling?
         RET     NZ              ; Other key, ignore
 
-STALL:  RST     10H             ; Wait for key
+STALL:  EXX                     ; Wait for key
+        LD      C,$06
+        LD      E,$ff
+        CALL    $0005
+        EXX
+        OR      A
+        JR      Z,STALL
         CP      CTRLQ           ; Resume scrolling?
         RET      Z              ; Release the chokehold
         CP      CTRLC           ; Second break?
@@ -4115,7 +4125,13 @@ ATNTAB: .BYTE   9                       ; Table used by ATN
 
 ARET:   RET                     ; A RETurn instruction
 
-GETINP: RST	    10H             ;input a character
+GETINP: EXX                     ;input a character
+        LD      C,$06
+        LD      E,$FF
+        CALL    $0005
+        EXX
+        OR      A
+        JR      Z,GETINP
         RET
 
 CLS: 
@@ -4329,8 +4345,12 @@ JJUMP1:
         LD      IX,-1           ; Flag cold start
         JP      CSTART          ; Go and initialise
 
-MONOUT: 
-        JP      $0008           ; output a char
+MONOUT: EXX
+        LD      C,$06
+        LD      E,A
+        CALL    $0005           ; output a char
+        EXX
+        RET
 
 
 MONITR: 
